@@ -12,7 +12,8 @@ import image
 import time
 from pyb import UART
 
-import camnet
+from camnet import SerialComms
+from camnet import Camera
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -44,7 +45,7 @@ tag_families |= image.ARTOOLKIT  # comment out to disable this family
 # rate for the 4x4 tag is much, much, much, higher than the 6x6 tag. So, unless you have a
 # reason to use the other tags families just use TAG36H11 which is the default family.
 
-cnet = camnet.SerialComms(1)
+cnet = SerialComms(1)
 
 def family_name(tag):
     if tag.family() == image.TAG16H5:
@@ -61,7 +62,7 @@ def family_name(tag):
         return "ARTOOLKIT"
 
 def handlemsg(msg):
-    output = serialcomms.uart.write(msg)
+    output = SerialComms.uart.write(msg)
 
 
 #while True:
