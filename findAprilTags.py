@@ -10,13 +10,8 @@
 import sensor
 import image
 import time
-import math
-import sys
-import os
 from pyb import UART
 
-
-print(os.listdir())
 import camnet
 
 sensor.reset()
