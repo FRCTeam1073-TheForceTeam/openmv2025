@@ -236,7 +236,7 @@ The pixel coordinates are 2 12-bit numbers packed into 3 bytes as follows:
 
 The color detection API class is implemented by nodes that indicate
 color detection in their configuration. The color detection API is
-used to distingush color sequences or areas. The colors are presented
+used to distinguish color sequences or areas. The colors are presented
 in order in the scene. Colors should be reported in left-to-right
 order from the image and their horizontal locations [percentage]
 provided.
@@ -304,8 +304,7 @@ The area of the target is returned in pixels as a 16-bit number.
 
 ## Range Sensor API Class: API Class = 6
 
-The LiDAR Range sensors are run off of the OpenMV camera and must maintain the same CAN sending
-convetion as the OpenMV.
+The LiDAR Range sensors are run off of the OpenMV camera and must maintain the same CAN sending convention as the OpenMV.
 
     - API Index 0: Range Reading: OpenMV => Rio
             - Byte 0: 16 bit hi  \  #Range in mm
