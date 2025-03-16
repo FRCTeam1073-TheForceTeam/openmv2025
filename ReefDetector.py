@@ -2,7 +2,7 @@
 
 import sensor
 import time
-import frc_can
+import frc_can # this needs to be stored on camera
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -26,13 +26,13 @@ while True:
 
     # keep track of information about the tallest blob
     tallBlobRect = (0, 0, 0, 0)
-    tallBlobCenter = (0, 0, 0, 0, 0, 0)
+    tallBlobCenter = (0, 0)
     tallBlobH = 0 # height
     tallBlobI = 0 # index
     tallBlobA = 0 # aspect
 
     # keep track of infomation about the smallest blob
-    smallestRatioBlobCenter = (0, 0, 0, 0, 0, 0)
+    smallestRatioBlobCenter = (0, 0)
     smallestRatioBlobRect = (0, 0, 0, 0)
     smallestRatio = 0
     smallestRatioBlobI = 0
@@ -52,7 +52,7 @@ while True:
         aspect = blob.w() / blob.h()
 
         # check if the blob is valid
-        if aspect < 0.3 and blob.w() > 10 and blob.h() > 60:
+        if blob.w() > 10 and blob.h() > 60:
 
             # set the tallest blob info if blob is tallest
             if blob.h() > tallBlobH:
@@ -60,14 +60,14 @@ while True:
                 tallBlobH = blob.h()
                 tallBlobA = aspect
                 tallBlobRect = (blob.x(), blob.y(), blob.w(), blob.h())
-                tallBlobCenter = (blob.cx(), blob.cy(), blob.vx(), blob.vy(), blob.ttype(), blob.qual())
+                tallBlobCenter = (blob.cx(), blob.cy())
 
             # set the smallest blob info if the blob is smallest
             if aspect < smallestRatio:
                 smallestRatioBlobI = blobCount
                 smallestRatio = aspect
                 smallestRatioRect = (blob.x(), blob.y(), blob.w(), blob.h())
-                smallestRatioBlobCenter = (blob.cx(), blob.cy(), blob.vx(), blob.vy(), blob.ttype(), blob.qual())
+                smallestRatioBlobCenter = (blob.cx(), blob.cy())
 
             validBlobCount += 1
 
@@ -89,6 +89,7 @@ while True:
         else:
             bestBlob = tallBlobI
 
+    print(f'{tallBlobIsBest} +  {validBlobCount}')
     # run every 50 frames
     if can.get_frame_counter() % 50 == 0:
         can.send_config_data()
@@ -96,13 +97,16 @@ while True:
 
     # draw a rectangle and send tallest info to RIO
     if tallBlobIsBest and validBlobCount != 0:
+        print("In tall one")
         img.draw_rectangle(tallBlobRect)
         can.send_track_data(0, tallBlobCenter)
 
     # draw a rectangle and send smallest to RIO
     elif validBlobCount != 0:
+        print("In small one")
         img.draw_rectangle(smallestRatioBlobRect)
         can.send_track_data(0, smallestRatioBlobCenter)
 
     else:
-        can.send_track_data(0, 0, 0, 0, 0, 0, 0)
+        print("Empty")
+        can.send_track_data(0, (0, 0))

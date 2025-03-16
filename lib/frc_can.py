@@ -17,7 +17,7 @@ candata = [0, 0, 0, memoryview(canbuffer)]
 class frc_can:
 
     def __init__(self, devid):
-        self.can = CAN(2, CAN.NORMAL)
+        self.can = CAN(2, CAN.NORMAL, baudrate=1000000, sample_point=75)
         # Device id [0-63]
         self.devid = devid
         # Mode of the device
@@ -35,16 +35,15 @@ class frc_can:
         # Initialize CAN based on which type of board we're on
         if omv.board_type() == "H7":
             print("H7 CAN Interface")
-            self.can.init(CAN.NORMAL, extframe=True, baudrate=1000000, sampling_point=75) # 1000Kbps H7
             #self.can.init(CAN.NORMAL, extframe=True, prescaler=4,  sjw=1, bs1=8, bs2=3)
         elif omv.board_type() == "M7":
-            self.can.init(CAN.NORMAL, extframe=True, prescaler=3,  sjw=1, bs1=10, bs2=7) # 1000Kbps on M7
             self.can.setfilter(0, CAN.LIST32, 0, [self.my_arb_id(self.api_id(1,3)), self.my_arb_id(self.api_id(1,4))])
             print("M7 CAN Interface")
         else:
             print("CAN INTERFACE NOT INITIALIZED!")
 
         self.can.restart()
+        print("Camera Initialized")
 
     # Set config: This is reported to rio when we send config.
     def set_config(self, simple_targets, line_segments, color_detect, advanced_targets):
@@ -90,8 +89,9 @@ class frc_can:
         try:
             self.can.send(bytes, sendid, timeout=33)
         except:
-            print("CANbus exception.")
-            self.can.restart()
+            pass
+            # print("CANbus exception.")
+            # self.can.restart()
 
     # API Class - 1:  Configuration
     # Whenever we set the mode from here we send it to the RoboRio
@@ -144,8 +144,6 @@ class frc_can:
         except:
             return False
 
-
-
     # Send the RIO the heartbeat message with our mode and frame counter:
     def send_heartbeat(self):
         hb = bytearray(3)
@@ -157,21 +155,17 @@ class frc_can:
     # API Class - 2: Simple Target Tracking
 
     # Send tracking data for a given tracking slot to RoboRio.
-    def send_track_data(self, slot, cx, cy, vx, vy, ttype, qual):
-        tdb = bytearray(7)
+    def send_track_data(self, slot, cx, cy):
+        tdb = bytearray(3)
         tdb[0] = (cx & 0xff0) >> 4
         tdb[1] = (cx & 0x00f) << 4 | (cy & 0xf00) >> 8
         tdb[2] = (cy & 0x0ff)
-        tdb[3] = (vx & 0xff)
-        tdb[4] = (vy & 0xff)
-        tdb[5] = (ttype & 0xff)
-        tdb[6] = (qual & 0xff)
         self.send(self.api_id(2, slot), tdb)
 
     # Track is empty when quality is zero, send empty slot /w 0 quality.
     def clear_track_data(self, slot):
         # Assume fills with zero.
-        tdb = bytearray(7)
+        tdb = bytearray(3)
         self.send(self.api_id(2, slot), tdb)
 
 
@@ -179,20 +173,18 @@ class frc_can:
 
     # Send line segment data to a slot to RoboRio.
     def send_line_data(self, slot, x0, y0, x1, y1, ttype, qual):
-        ldb = bytearray(8)
+        ldb = bytearray(6)
         ldb[0] = (x0 & 0xff0) >> 4
         ldb[1] = ((x0 & 0x00f) << 4) | ((y0 & 0xf00) >> 8)
         ldb[2] = (y0 & 0x0ff)
         ldb[3] = (x1 & 0xff0) >> 4
         ldb[4] = ((x1 & 0x00f) << 4) | ((y1 & 0xf00) >> 8)
         ldb[5] = (y1 & 0x0ff)
-        ldb[6] = (ttype & 0xff)
-        ldb[7] = (qual & 0xff)
         self.send(self.api_id(3,slot), ldb)
 
     # Send null, 0 quality line to clear a slot for RoboRio.
     def clear_line_data(self, slot):
-        ldb = bytearray(8)
+        ldb = bytearray(6)
         self.send(self.api_id(3,slot), ldb)
 
     # Color Detection API Class: 4
@@ -219,20 +211,18 @@ class frc_can:
 
     # Send advanced target tracking data to RoboRio
     def send_advanced_track_data(self, cx, cy, area, ttype, qual, skew, slot=1):
-        atb = bytearray(8)
+        atb = bytearray(6)
         atb[0] = (cx & 0xff0) >> 4
         atb[1] = ((cx & 0x00f) << 4) | ((cy & 0xf00) >> 8)
         atb[2] = (cy & 0x0ff)
         atb[3] = (area & 0xff00) >> 8
         atb[4] = (area & 0x00ff)
-        atb[5] = (ttype & 0xff)
-        atb[6] = (qual & 0xff)
-        atb[7] = (skew & 0xff)
+        atb[5] = (skew & 0xff)
         self.send(self.api_id(5, slot), atb)
 
     # Send a null / 0 quality update to clear track data to RoboRio
     def clear_advanced_track_data(self, slot=1):
-        atb = bytearray(8)
+        atb = bytearray(6)
         self.send(self.api_id(5, slot), atb)
 
     #send LiDar range sensing data to the RIO using API class 6
