@@ -20,6 +20,7 @@ clock = time.clock()
 threshold = (5, 95, 10, 55, -50, 20)
 
 previousBestBlobA = 0
+frame_diff = 50
 
 while True:
     tallBlobIsBest = True
@@ -45,14 +46,15 @@ while True:
     can.update_frame_counter()
     clock.tick()
     img = sensor.snapshot()
-    can.send_heartbeat()
+    if can.get_frame_counter() % frame_diff == 0:
+        can.send_heartbeat()
     blobs = img.find_blobs([threshold], pixels_threshold=100, area_threshold=100, merge=True, margin=2)
 
     for blob in blobs:
         aspect = blob.w() / blob.h()
 
         # check if the blob is valid
-        if blob.w() > 10 and blob.h() > 60:
+        if aspect < 0.1 and blob.w() > 10 and blob.h() > 60:
 
             # set the tallest blob info if blob is tallest
             if blob.h() > tallBlobH:
@@ -89,24 +91,24 @@ while True:
         else:
             bestBlob = tallBlobI
 
-    print(f'{tallBlobIsBest} +  {validBlobCount}')
     # run every 50 frames
-    if can.get_frame_counter() % 50 == 0:
+    if can.get_frame_counter() % frame_diff + 5 == 0:
         can.send_config_data()
+
+    if can.get_frame_counter() % frame_diff + 10 == 0:
         can.send_camera_status(sensor.width(), sensor.height())
 
     # draw a rectangle and send tallest info to RIO
-    if tallBlobIsBest and validBlobCount != 0:
-        print("In tall one")
-        img.draw_rectangle(tallBlobRect)
-        can.send_track_data(0, tallBlobCenter)
+    if can.get_frame_counter() % frame_diff + 15:
+        if tallBlobIsBest and validBlobCount != 0:
+            img.draw_rectangle(tallBlobRect[0], tallBlobRect[1], tallBlobRect[2], tallBlobRect[3])
+            can.send_track_data(0, tallBlobCenter[0], smallestRatioBlobCenter[1])
 
-    # draw a rectangle and send smallest to RIO
-    elif validBlobCount != 0:
-        print("In small one")
-        img.draw_rectangle(smallestRatioBlobRect)
-        can.send_track_data(0, smallestRatioBlobCenter)
+        # draw a rectangle and send smallest to RIO
+        elif validBlobCount != 0:
+            img.draw_rectangle(smallestRatioBlobRect[0], smallestRatioBlobRect[1], smallestRatioBlobRect[2], smallestRatioBlobRect[3])
+            can.send_track_data(0, smallestRatioBlobCenter[0], smallestRatioBlobCenter[1])
 
-    else:
-        print("Empty")
-        can.send_track_data(0, (0, 0))
+        else:
+            can.send_track_data(0, 0, 0)
+    can.update_frame_counter()

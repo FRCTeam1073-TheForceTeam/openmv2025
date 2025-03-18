@@ -5,6 +5,7 @@
 # for our OpenMV cameras to talk to the RoboRio using
 # FRC Can Arbitration IDs.
 #
+
 from pyb import CAN
 import omv
 
@@ -17,7 +18,7 @@ candata = [0, 0, 0, memoryview(canbuffer)]
 class frc_can:
 
     def __init__(self, devid):
-        self.can = CAN(2, CAN.NORMAL, baudrate=1000000, sample_point=75)
+        self.can = CAN(2, CAN.NORMAL, baudrate=1000000, sample_point=50)
         # Device id [0-63]
         self.devid = devid
         # Mode of the device
@@ -90,8 +91,8 @@ class frc_can:
             self.can.send(bytes, sendid, timeout=33)
         except:
             pass
-            # print("CANbus exception.")
-            # self.can.restart()
+            print("CANbus exception.")
+            self.can.restart()
 
     # API Class - 1:  Configuration
     # Whenever we set the mode from here we send it to the RoboRio
@@ -150,7 +151,7 @@ class frc_can:
         hb[0] = (self.mode & 0xff)
         hb[1] = (self.frame_counter & 0xff00) >> 8
         hb[2] = (self.frame_counter & 0x00ff)
-        self.send(self.api_id(1,2), hb)
+        #self.send(self.api_id(1,2), hb)
 
     # API Class - 2: Simple Target Tracking
 
@@ -160,12 +161,12 @@ class frc_can:
         tdb[0] = (cx & 0xff0) >> 4
         tdb[1] = (cx & 0x00f) << 4 | (cy & 0xf00) >> 8
         tdb[2] = (cy & 0x0ff)
-        self.send(self.api_id(2, slot), tdb)
+        #self.send(self.api_id(2, slot), tdb)
 
     # Track is empty when quality is zero, send empty slot /w 0 quality.
     def clear_track_data(self, slot):
         # Assume fills with zero.
-        tdb = bytearray(3)
+        tdb = bytearray(7)
         self.send(self.api_id(2, slot), tdb)
 
 
@@ -184,7 +185,7 @@ class frc_can:
 
     # Send null, 0 quality line to clear a slot for RoboRio.
     def clear_line_data(self, slot):
-        ldb = bytearray(6)
+        ldb = bytearray(8)
         self.send(self.api_id(3,slot), ldb)
 
     # Color Detection API Class: 4
@@ -222,7 +223,7 @@ class frc_can:
 
     # Send a null / 0 quality update to clear track data to RoboRio
     def clear_advanced_track_data(self, slot=1):
-        atb = bytearray(6)
+        atb = bytearray(8)
         self.send(self.api_id(5, slot), atb)
 
     #send LiDar range sensing data to the RIO using API class 6
