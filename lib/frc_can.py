@@ -62,12 +62,13 @@ class frc_can:
 
 
     # Arbitration ID helper packs FRC CAN indices into a CANBus arbitration ID
-    def arbitration_id(devtype, mfr, devid, apiid):
-        retval = (devtype & 0x1f) << 24
-        retval = retval | ((mfr & 0xff) << 16)
-        retval = retval | ((apiid & 0x3ff) << 6)
-        retval = retval | (devid & 0x3f)
-        return retval
+    def arbitration_id(devtype, mfr, devid, apiid): # dev_type = 10, apiid = 0, dev_id = 1
+        retval = (devtype & 0x1f) << 24 # retval = 167772160, hex = 0xa000000
+        retval = retval | ((mfr & 0xff) << 16) # retval = 179109888, hex = 0xaad0000
+        retval = retval | ((apiid & 0x3ff) << 6) # retval = 179109888, hex = 0xaad0000
+        retval = retval | (devid & 0x3f) # retval = 179109889, hex = 0xaad0001
+        return retval # bin = 0b1010101011010000000000000001 --> discounting 0b 28 bits
+        # and first bit is zero making 29 (0b01010101011010000000000000001)
 
 
     # Arbitration ID helper, assumes devtype, mfr, and instance devid.
@@ -88,7 +89,7 @@ class frc_can:
     def send(self, apiid, bytes):
         sendid = self.my_arb_id(apiid)
         try:
-            self.can.send(bytes, sendid, timeout=33)
+            self.can.send(bytes, 0b01010101011010000000000000001, timeout=33)
         except:
             pass
             print("CANbus exception.")
