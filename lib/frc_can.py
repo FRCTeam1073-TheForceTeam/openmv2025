@@ -90,9 +90,12 @@ class frc_can:
         sendid = self.my_arb_id(apiid)
         try:
             self.can.send(bytes, 0b01010101011010000000000000001, timeout=33)
-        except:
-            pass
-            print("CANbus exception.")
+        # except:
+        #     pass
+        #     print("CANbus exception.")
+        #     self.can.restart()
+        except Exception as e:
+            print(f'CANbus exception or maybe another one we caught them all: {e}')
             self.can.restart()
 
     # API Class - 1:  Configuration
