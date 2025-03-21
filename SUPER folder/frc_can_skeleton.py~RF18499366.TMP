@@ -24,9 +24,6 @@ class frc_can:
     def update_frame_counter(self):
         self.frame_counter = self.frame_counter + 1
 
-    def getFrameCounter(self):
-        return self.frame_counter
-
 
     # Send message to my API id: Sends from OpenMV to Rio with our address.
     def send(self, bytes):

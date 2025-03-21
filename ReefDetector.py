@@ -2,7 +2,8 @@
 
 import sensor
 import time
-import frc_can # this needs to be stored on camera
+# import frc_can # this needs to be stored on camera
+import frc_can_skeleton
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -11,16 +12,19 @@ sensor.skip_frames(time=2000)
 sensor.set_auto_gain(False)  # must be turned off for color tracking
 sensor.set_auto_whitebal(False)  # must be turned off for color tracking
 
-can = frc_can.frc_can(1)
-can.set_config(2, 0, 0, 0)
-can.set_mode(1)
+can = frc_can_skeleton.frc_can(1)
+# can.set_config(2, 0, 0, 0)
+# can.set_mode(1)
 
 clock = time.clock()
 
-threshold = (5, 95, 10, 55, -50, 20)
+threshold = (4, 95, 10, 65, -50, 20)
 
 previousBestBlobA = 0
-frame_diff = 50
+frame_diff = 10
+
+rect_colored = False
+rect_attribute = (0, 0, 0, 0)
 
 while True:
     tallBlobIsBest = True
@@ -31,12 +35,14 @@ while True:
     tallBlobH = 0 # height
     tallBlobI = 0 # index
     tallBlobA = 0 # aspect
+    tallBlobArray = bytearray(3)
 
     # keep track of infomation about the smallest blob
     smallestRatioBlobCenter = (0, 0)
     smallestRatioBlobRect = (0, 0, 0, 0)
     smallestRatio = 0
     smallestRatioBlobI = 0
+    smallestRatioBlobArray = bytearray(3)
 
     # keep track of the number and best blob
     validBlobCount = 0
@@ -46,20 +52,18 @@ while True:
     can.update_frame_counter()
     clock.tick()
     img = sensor.snapshot()
-    if can.get_frame_counter() % frame_diff == 0:
+    if can.getFrameCounter() % frame_diff == 0:
         can.send_heartbeat()
     blobs = img.find_blobs([threshold], pixels_threshold=100, area_threshold=100, merge=True, margin=2)
 
     for blob in blobs:
-        aspect = blob.w() / blob.h()
-
+        aspect = blob.h() / blob.w() # camera is sideways so w and h are swapped
         # check if the blob is valid
-        if aspect < 0.1 and blob.w() > 10 and blob.h() > 60:
-
+        if aspect < 0.15 and blob.h() > 10 and blob.w() > 60:
             # set the tallest blob info if blob is tallest
-            if blob.h() > tallBlobH:
+            if blob.w() > tallBlobH:
                 tallBlobI = blobCount
-                tallBlobH = blob.h()
+                tallBlobH = blob.w()
                 tallBlobA = aspect
                 tallBlobRect = (blob.x(), blob.y(), blob.w(), blob.h())
                 tallBlobCenter = (blob.cx(), blob.cy())
@@ -70,7 +74,6 @@ while True:
                 smallestRatio = aspect
                 smallestRatioRect = (blob.x(), blob.y(), blob.w(), blob.h())
                 smallestRatioBlobCenter = (blob.cx(), blob.cy())
-
             validBlobCount += 1
 
         blobCount += 1
@@ -92,23 +95,45 @@ while True:
             bestBlob = tallBlobI
 
     # run every 50 frames
-    if can.get_frame_counter() % (frame_diff + 5) == 0:
-        can.send_config_data()
-
-    if can.get_frame_counter() % (frame_diff + 10) == 0:
-        can.send_camera_status(sensor.width(), sensor.height())
+    # if can.getFrameCounter() % (frame_diff + 5) == 0:
+    #    can.send_config_data()
+    #
+    # if can.get_frame_counter() % (frame_diff + 10) == 0:
+    #   can.send_camera_status(sensor.width(), sensor.height())
 
     # draw a rectangle and send tallest info to RIO
-    if can.get_frame_counter() % (frame_diff + 15) == 0:
+    if can.getFrameCounter() % (frame_diff + 15) == 0:
         if tallBlobIsBest and validBlobCount != 0:
-            img.draw_rectangle(tallBlobRect[0], tallBlobRect[1], tallBlobRect[2], tallBlobRect[3])
-            can.send_track_data(0, tallBlobCenter[0], smallestRatioBlobCenter[1])
+            # can.send_track_data(0, tallBlobCenter[0], smallestRatioBlobCenter[1])
+            tallBlobArray[0] = (tallBlobCenter[0] & 0xff0) >> 4
+            tallBlobArray[1] = (tallBlobCenter[0] & 0x00f) << 4 | (tallBlobCenter[1] & 0x00f) >> 8
+            tallBlobArray[2] = (tallBlobCenter[1] & 0x0ff)
+            can.send(tallBlobArray)
+            print('found tall blob')
+            rect_colored = True
+            rect_attribute = tallBlobRect
 
         # draw a rectangle and send smallest to RIO
         elif validBlobCount != 0:
-            img.draw_rectangle(smallestRatioBlobRect[0], smallestRatioBlobRect[1], smallestRatioBlobRect[2], smallestRatioBlobRect[3])
-            can.send_track_data(0, smallestRatioBlobCenter[0], smallestRatioBlobCenter[1])
+            img.draw_rectangle(smallestRatioBlobRect[0], smallestRatioBlobRect[1], smallestRatioBlobRect[2], smallestRatioBlobRect[3], color = (255, 255, 0), thickness = 2)
+            # can.send_track_data(0, smallestRatioBlobCenter[0], smallestRatioBlobCenter[1])
+            smallestRatioBlobArray[0] = (smallestRatioBlobCenter[0] & 0xff0) >> 4
+            smallestRatioBlobArray[1] = (smallestRatioBlobCenter[0] & 0x00f) << 4 | (smallestRatioBlobCenter[1] & 0x00f) >> 8
+            smallestRatioBlobArray[2] = (smallestRatioBlobCenter[1] & 0x0ff)
+            can.send(smallestRatioBlobArray)
+            print('found blob!!!')
+            rect_colored = True
+            rect_attribute = smallestRatioBlobRect
 
         else:
-            can.send_track_data(0, 0, 0)
+            # can.send_track_data(0, 0, 0)
+            print('no valid blobs')
+            can.send(0)
+            rect_colored = False
+
+    if(rect_colored):
+        img.draw_rectangle(rect_attribute[0], rect_attribute[1], rect_attribute[2], rect_attribute[3], color = (255, 255, 0), thickness = 2)
+    else:
+        img.draw_rectangle(rect_attribute[0], rect_attribute[1], rect_attribute[2], rect_attribute[3], color = (255, 255, 0), thickness = 0)
+
     can.update_frame_counter()

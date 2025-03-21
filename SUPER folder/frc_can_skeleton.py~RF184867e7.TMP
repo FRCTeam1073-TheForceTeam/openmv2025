@@ -13,7 +13,7 @@ class frc_can:
         # Initialize CAN based on which type of board we're on
         if omv.board_type() == "H7":
             print("H7 CAN Interface")
-            # self.can.init(CAN.NORMAL, extframe=True, prescaler=4,  sjw=1, bs1=8, bs2=3)
+            self.can.init(CAN.NORMAL, extframe=True, prescaler=4,  sjw=1, bs1=8, bs2=3)
         else:
             print("CAN INTERFACE NOT INITIALIZED!")
 
@@ -23,9 +23,6 @@ class frc_can:
     # Update counter should be called after each processed frame. Sent to Rio in heartbeat.
     def update_frame_counter(self):
         self.frame_counter = self.frame_counter + 1
-
-    def getFrameCounter(self):
-        return self.frame_counter
 
 
     # Send message to my API id: Sends from OpenMV to Rio with our address.
