@@ -5,6 +5,7 @@
 # for our OpenMV cameras to talk to the RoboRio using
 # FRC Can Arbitration IDs.
 #
+
 from pyb import CAN
 import omv
 
@@ -17,7 +18,7 @@ candata = [0, 0, 0, memoryview(canbuffer)]
 class frc_can:
 
     def __init__(self, devid):
-        self.can = CAN(2, CAN.NORMAL)
+        self.can = CAN(2, CAN.NORMAL, baudrate=1000000, sample_point=50)
         # Device id [0-63]
         self.devid = devid
         # Mode of the device
@@ -35,16 +36,11 @@ class frc_can:
         # Initialize CAN based on which type of board we're on
         if omv.board_type() == "H7":
             print("H7 CAN Interface")
-            self.can.init(CAN.NORMAL, extframe=True, baudrate=1000000, sampling_point=75) # 1000Kbps H7
-            #self.can.init(CAN.NORMAL, extframe=True, prescaler=4,  sjw=1, bs1=8, bs2=3)
-        elif omv.board_type() == "M7":
-            self.can.init(CAN.NORMAL, extframe=True, prescaler=3,  sjw=1, bs1=10, bs2=7) # 1000Kbps on M7
-            self.can.setfilter(0, CAN.LIST32, 0, [self.my_arb_id(self.api_id(1,3)), self.my_arb_id(self.api_id(1,4))])
-            print("M7 CAN Interface")
         else:
             print("CAN INTERFACE NOT INITIALIZED!")
 
         self.can.restart()
+        print("Camera Initialized")
 
     # Set config: This is reported to rio when we send config.
     def set_config(self, simple_targets, line_segments, color_detect, advanced_targets):
@@ -62,12 +58,13 @@ class frc_can:
 
 
     # Arbitration ID helper packs FRC CAN indices into a CANBus arbitration ID
-    def arbitration_id(devtype, mfr, devid, apiid):
-        retval = (devtype & 0x1f) << 24
-        retval = retval | ((mfr & 0xff) << 16)
-        retval = retval | ((apiid & 0x3ff) << 6)
-        retval = retval | (devid & 0x3f)
-        return retval
+    def arbitration_id(devtype, mfr, devid, apiid): # dev_type = 10, apiid = 0, dev_id = 1
+        retval = (devtype & 0x1f) << 24 # retval = 167772160, hex = 0xa000000
+        retval = retval | ((mfr & 0xff) << 16) # retval = 179109888, hex = 0xaad0000
+        retval = retval | ((apiid & 0x3ff) << 6) # retval = 179109888, hex = 0xaad0000
+        retval = retval | (devid & 0x3f) # retval = 179109889, hex = 0xaad0001
+        return retval # bin = 0b1010101011010000000000000001 --> discounting 0b 28 bits
+        # and first bit is zero making 29 (0b01010101011010000000000000001)
 
 
     # Arbitration ID helper, assumes devtype, mfr, and instance devid.
@@ -88,7 +85,7 @@ class frc_can:
     def send(self, apiid, bytes):
         sendid = self.my_arb_id(apiid)
         try:
-            self.can.send(bytes, sendid, timeout=33)
+            self.can.send(bytes, sendid, extframe=True,  timeout=33)
         except:
             print("CANbus exception.")
             self.can.restart()
@@ -144,28 +141,22 @@ class frc_can:
         except:
             return False
 
-
-
     # Send the RIO the heartbeat message with our mode and frame counter:
     def send_heartbeat(self):
         hb = bytearray(3)
         hb[0] = (self.mode & 0xff)
         hb[1] = (self.frame_counter & 0xff00) >> 8
         hb[2] = (self.frame_counter & 0x00ff)
-        self.send(self.api_id(1,2), hb)
+        #self.send(self.api_id(1,2), hb)
 
     # API Class - 2: Simple Target Tracking
 
     # Send tracking data for a given tracking slot to RoboRio.
-    def send_track_data(self, slot, cx, cy, vx, vy, ttype, qual):
-        tdb = bytearray(7)
+    def send_track_data(self, slot, cx, cy):
+        tdb = bytearray(3)
         tdb[0] = (cx & 0xff0) >> 4
         tdb[1] = (cx & 0x00f) << 4 | (cy & 0xf00) >> 8
         tdb[2] = (cy & 0x0ff)
-        tdb[3] = (vx & 0xff)
-        tdb[4] = (vy & 0xff)
-        tdb[5] = (ttype & 0xff)
-        tdb[6] = (qual & 0xff)
         self.send(self.api_id(2, slot), tdb)
 
     # Track is empty when quality is zero, send empty slot /w 0 quality.
@@ -179,15 +170,13 @@ class frc_can:
 
     # Send line segment data to a slot to RoboRio.
     def send_line_data(self, slot, x0, y0, x1, y1, ttype, qual):
-        ldb = bytearray(8)
+        ldb = bytearray(6)
         ldb[0] = (x0 & 0xff0) >> 4
         ldb[1] = ((x0 & 0x00f) << 4) | ((y0 & 0xf00) >> 8)
         ldb[2] = (y0 & 0x0ff)
         ldb[3] = (x1 & 0xff0) >> 4
         ldb[4] = ((x1 & 0x00f) << 4) | ((y1 & 0xf00) >> 8)
         ldb[5] = (y1 & 0x0ff)
-        ldb[6] = (ttype & 0xff)
-        ldb[7] = (qual & 0xff)
         self.send(self.api_id(3,slot), ldb)
 
     # Send null, 0 quality line to clear a slot for RoboRio.
@@ -219,15 +208,13 @@ class frc_can:
 
     # Send advanced target tracking data to RoboRio
     def send_advanced_track_data(self, cx, cy, area, ttype, qual, skew, slot=1):
-        atb = bytearray(8)
+        atb = bytearray(6)
         atb[0] = (cx & 0xff0) >> 4
         atb[1] = ((cx & 0x00f) << 4) | ((cy & 0xf00) >> 8)
         atb[2] = (cy & 0x0ff)
         atb[3] = (area & 0xff00) >> 8
         atb[4] = (area & 0x00ff)
-        atb[5] = (ttype & 0xff)
-        atb[6] = (qual & 0xff)
-        atb[7] = (skew & 0xff)
+        atb[5] = (skew & 0xff)
         self.send(self.api_id(5, slot), atb)
 
     # Send a null / 0 quality update to clear track data to RoboRio

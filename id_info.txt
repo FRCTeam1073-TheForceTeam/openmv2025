@@ -1,0 +1,13 @@
+from pyb import CAN
+can = CAN(1, CAN.LOOPBACK)
+can.setfilter(0, CAN.LIST16, 0, (123, 124, 125, 126))  # set a filter to receive messages with id=123, 124, 125 and 126
+can.send('message!', 123)   # send a message with id 123
+can.recv(0)                 # receive message on FIFO 0
+
+
+
+id : 01010 10101101 000000 0000 000001
+
+28 digits of base 2 in retval
+
+01010101011010000000000000001
