@@ -36,10 +36,6 @@ class frc_can:
         # Initialize CAN based on which type of board we're on
         if omv.board_type() == "H7":
             print("H7 CAN Interface")
-            #self.can.init(CAN.NORMAL, extframe=True, prescaler=4,  sjw=1, bs1=8, bs2=3)
-        elif omv.board_type() == "M7":
-            self.can.setfilter(0, CAN.LIST32, 0, [self.my_arb_id(self.api_id(1,3)), self.my_arb_id(self.api_id(1,4))])
-            print("M7 CAN Interface")
         else:
             print("CAN INTERFACE NOT INITIALIZED!")
 
@@ -89,13 +85,9 @@ class frc_can:
     def send(self, apiid, bytes):
         sendid = self.my_arb_id(apiid)
         try:
-            self.can.send(bytes, 0b01010101011010000000000000001, timeout=33)
-        # except:
-        #     pass
-        #     print("CANbus exception.")
-        #     self.can.restart()
-        except Exception as e:
-            print(f'CANbus exception or maybe another one we caught them all: {e}')
+            self.can.send(bytes, sendid, extframe=True,  timeout=33)
+        except:
+            print("CANbus exception.")
             self.can.restart()
 
     # API Class - 1:  Configuration
@@ -165,7 +157,7 @@ class frc_can:
         tdb[0] = (cx & 0xff0) >> 4
         tdb[1] = (cx & 0x00f) << 4 | (cy & 0xf00) >> 8
         tdb[2] = (cy & 0x0ff)
-        #self.send(self.api_id(2, slot), tdb)
+        self.send(self.api_id(2, slot), tdb)
 
     # Track is empty when quality is zero, send empty slot /w 0 quality.
     def clear_track_data(self, slot):
