@@ -58,22 +58,22 @@ while True:
     blobs = img.find_blobs([threshold], pixels_threshold=100, area_threshold=100, merge=True, margin=2)
 
     for blob in blobs:
-        aspect = blob.h() / blob.w() # camera is sideways so w and h are swapped
+        aspect = blob.w() / blob.h() # camera is sideways so w and h are swapped
         # check if the blob is valid
-        if blob.h() > 10 and blob.w() > 60:
+        if blob.w() > 10 and blob.h() > 60:
             # set the tallest blob info if blob is tallest
-            if blob.w() > tallBlobH:
+            if blob.h() > tallBlobH:
                 tallBlobI = blobCount
-                tallBlobH = blob.w()
+                tallBlobH = blob.h()
                 tallBlobA = aspect
-                tallBlobRect = (blob.x(), blob.y(), blob.w(), blob.h())
+                tallBlobRect = (blob.x(), blob.y(), blob.h(), blob.w())
                 tallBlobCenter = (blob.cx(), blob.cy())
 
             # set the smallest blob info if the blob is smallest
             if aspect < smallestRatio:
                 smallestRatioBlobI = blobCount
                 smallestRatio = aspect
-                smallestRatioRect = (blob.x(), blob.y(), blob.w(), blob.h())
+                smallestRatioRect = (blob.x(), blob.y(), blob.h(), blob.w())
                 smallestRatioBlobCenter = (blob.cx(), blob.cy())
             validBlobCount += 1
 
