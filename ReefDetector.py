@@ -3,7 +3,7 @@
 import sensor
 import time
 # import frc_can # this needs to be stored on camera
-import frc_can_skeleton
+import frc_can
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -12,7 +12,7 @@ sensor.skip_frames(time=2000)
 sensor.set_auto_gain(False)  # must be turned off for color tracking
 sensor.set_auto_whitebal(False)  # must be turned off for color tracking
 
-can = frc_can_skeleton.frc_can(1)
+can = frc_can.frc_can(1)
 # can.set_config(2, 0, 0, 0)
 # can.set_mode(1)
 
@@ -21,10 +21,12 @@ clock = time.clock()
 threshold = (4, 95, 10, 65, -50, 20)
 
 previousBestBlobA = 0
-frame_diff = 10
+frame_diff = 5
 
 rect_colored = False
 rect_attribute = (0, 0, 0, 0)
+tallBlobArray = bytearray(3)
+smallestRatioBlobArray = bytearray(3)
 
 while True:
     tallBlobIsBest = True
@@ -35,14 +37,12 @@ while True:
     tallBlobH = 0 # height
     tallBlobI = 0 # index
     tallBlobA = 0 # aspect
-    tallBlobArray = bytearray(3)
 
     # keep track of infomation about the smallest blob
     smallestRatioBlobCenter = (0, 0)
     smallestRatioBlobRect = (0, 0, 0, 0)
     smallestRatio = 0
     smallestRatioBlobI = 0
-    smallestRatioBlobArray = bytearray(3)
 
     # keep track of the number and best blob
     validBlobCount = 0
@@ -52,14 +52,14 @@ while True:
     can.update_frame_counter()
     clock.tick()
     img = sensor.snapshot()
-    if can.getFrameCounter() % frame_diff == 0:
-        can.send_heartbeat()
+    # if can.getFrameCounter() % frame_diff == 0:
+    #     can.send_heartbeat()
     blobs = img.find_blobs([threshold], pixels_threshold=100, area_threshold=100, merge=True, margin=2)
 
     for blob in blobs:
         aspect = blob.h() / blob.w() # camera is sideways so w and h are swapped
         # check if the blob is valid
-        if aspect < 0.15 and blob.h() > 10 and blob.w() > 60:
+        if blob.h() > 10 and blob.w() > 60:
             # set the tallest blob info if blob is tallest
             if blob.w() > tallBlobH:
                 tallBlobI = blobCount
@@ -130,6 +130,7 @@ while True:
             print('no valid blobs')
             can.send(0)
             rect_colored = False
+    print(rect_colored)
 
     if(rect_colored):
         img.draw_rectangle(rect_attribute[0], rect_attribute[1], rect_attribute[2], rect_attribute[3], color = (255, 255, 0), thickness = 2)
