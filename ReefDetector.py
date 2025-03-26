@@ -62,7 +62,7 @@ while True:
         # check if the blob is valid
         if blob.w() > 10 and blob.h() > 60:
             # set the tallest blob info if blob is tallest
-            if blob.h() > tallBlobH:
+            if aspect < 0.3 blob.h() > tallBlobH:
                 tallBlobI = blobCount
                 tallBlobH = blob.h()
                 tallBlobA = aspect
