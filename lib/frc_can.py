@@ -147,16 +147,20 @@ class frc_can:
         hb[0] = (self.mode & 0xff)
         hb[1] = (self.frame_counter & 0xff00) >> 8
         hb[2] = (self.frame_counter & 0x00ff)
-        #self.send(self.api_id(1,2), hb)
+        self.send(self.api_id(1,2), hb)
 
     # API Class - 2: Simple Target Tracking
 
     # Send tracking data for a given tracking slot to RoboRio.
     def send_track_data(self, slot, cx, cy):
-        tdb = bytearray(3)
+        tdb = bytearray(7)
         tdb[0] = (cx & 0xff0) >> 4
         tdb[1] = (cx & 0x00f) << 4 | (cy & 0xf00) >> 8
         tdb[2] = (cy & 0x0ff)
+        tdb[3] = (0 & 0xff)
+        tdb[4] = (0 & 0xff)
+        tdb[5] = (0 & 0xff)
+        tdb[6] = (0 & 0xff)
         self.send(self.api_id(2, slot), tdb)
 
     # Track is empty when quality is zero, send empty slot /w 0 quality.
@@ -170,13 +174,15 @@ class frc_can:
 
     # Send line segment data to a slot to RoboRio.
     def send_line_data(self, slot, x0, y0, x1, y1, ttype, qual):
-        ldb = bytearray(6)
+        ldb = bytearray(8)
         ldb[0] = (x0 & 0xff0) >> 4
         ldb[1] = ((x0 & 0x00f) << 4) | ((y0 & 0xf00) >> 8)
         ldb[2] = (y0 & 0x0ff)
         ldb[3] = (x1 & 0xff0) >> 4
         ldb[4] = ((x1 & 0x00f) << 4) | ((y1 & 0xf00) >> 8)
         ldb[5] = (y1 & 0x0ff)
+        ldb[6] = (ttype & 0xff)
+        ldb[7] = (qual & 0xff)
         self.send(self.api_id(3,slot), ldb)
 
     # Send null, 0 quality line to clear a slot for RoboRio.
@@ -208,13 +214,15 @@ class frc_can:
 
     # Send advanced target tracking data to RoboRio
     def send_advanced_track_data(self, cx, cy, area, ttype, qual, skew, slot=1):
-        atb = bytearray(6)
+        atb = bytearray(8)
         atb[0] = (cx & 0xff0) >> 4
         atb[1] = ((cx & 0x00f) << 4) | ((cy & 0xf00) >> 8)
         atb[2] = (cy & 0x0ff)
         atb[3] = (area & 0xff00) >> 8
         atb[4] = (area & 0x00ff)
-        atb[5] = (skew & 0xff)
+        atb[5] = (ttype & 0xff)
+        atb[6] = (qual & 0xff)
+        atb[7] = (skew & 0xff)
         self.send(self.api_id(5, slot), atb)
 
     # Send a null / 0 quality update to clear track data to RoboRio
