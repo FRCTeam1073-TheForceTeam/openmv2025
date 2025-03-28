@@ -152,15 +152,15 @@ class frc_can:
     # API Class - 2: Simple Target Tracking
 
     # Send tracking data for a given tracking slot to RoboRio.
-    def send_track_data(self, slot, cx, cy):
+    def send_track_data(self, slot, cx, cy, vx, vy, ttype, qual):
         tdb = bytearray(7)
         tdb[0] = (cx & 0xff0) >> 4
         tdb[1] = (cx & 0x00f) << 4 | (cy & 0xf00) >> 8
         tdb[2] = (cy & 0x0ff)
-        tdb[3] = (0 & 0xff)
-        tdb[4] = (0 & 0xff)
-        tdb[5] = (0 & 0xff)
-        tdb[6] = (0 & 0xff)
+        tdb[3] = (vx & 0xff)
+        tdb[4] = (vy & 0xff)
+        tdb[5] = (ttype & 0xff)
+        tdb[6] = (qual & 0xff)
         self.send(self.api_id(2, slot), tdb)
 
     # Track is empty when quality is zero, send empty slot /w 0 quality.
