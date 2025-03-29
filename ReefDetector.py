@@ -19,7 +19,8 @@ print('Config and Mode set\n')
 
 clock = time.clock()
 
-threshold = (33, 74, 38, 76, -59, -26)
+threshold = (28, 95, -16, 35, -31, -30)
+algae_threshold = (3, 80, -45, -5, 4, 36)
 
 previousBestBlobA = 0
 
